@@ -20,7 +20,7 @@ This project implements a complete RAG system from scratch:
 ---
 ## 🧠 RAG System Overview
 
-![RAG Overview](assets\rag_system.png)
+![RAG Overview](assets/rag_system.png)
 
 ---
 
