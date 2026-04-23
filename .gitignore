@@ -86,7 +86,11 @@ Desktop.ini
 # ============================================
 # Misc
 # ============================================
+# Misc
 *.log
 *.tmp
 *.bak
-*.cache
+notebooks/
+test.py
+run.bat
+stop.bat

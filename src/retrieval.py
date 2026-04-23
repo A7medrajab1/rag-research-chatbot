@@ -1,4 +1,3 @@
-# src/retrieval.py
 import re
 import numpy as np
 from src.embeddings import embed_texts
@@ -27,11 +26,11 @@ def search(query: str, index, chunks: list[dict],
 
 
 def expand_query(query: str) -> list[str]:
-    """Generate sub-queries by analyzing the question structure."""
+    """Generate sub-queries using rules only (no LLM needed)."""
     sub_queries = []
-    query_lower = query.lower()
+    query_lower = query.lower().strip()
 
-    # Detect comparison questions
+    # 1. Comparison: "difference between X and Y"
     comparison_patterns = [
         r"(?:difference|compare|comparison|vs|versus)\s+(?:between\s+)?(.+?)\s+(?:and|vs|versus)\s+(.+)",
         r"(.+?)\s+(?:vs|versus|compared to|compared with)\s+(.+)",
@@ -49,26 +48,28 @@ def expand_query(query: str) -> list[str]:
             ])
             break
 
-    # Detect "X in Y" pattern and search for X separately
+    # 2. "X in Y" pattern
     in_match = re.search(r"(.+?)\s+in\s+(.+)", query, re.IGNORECASE)
     if in_match:
         topic = in_match.group(1).strip()
         context = in_match.group(2).strip()
-        sub_queries.extend([
-            topic,  # search for topic alone
-            f"{topic} definition examples",
-            context,  # search for context alone
-        ])
+        sub_queries.extend([topic, f"{topic} definition examples", context])
 
-    # Detect "what is/are X" pattern
+    # 3. "what is/are X" pattern
     what_match = re.search(r"what\s+(?:is|are)\s+(?:the\s+)?(.+)", query, re.IGNORECASE)
     if what_match:
         topic = what_match.group(1).strip()
-        # Remove trailing context like "in 2007 benchmark"
         clean_topic = re.sub(r"\s+in\s+.+$", "", topic, flags=re.IGNORECASE)
         if clean_topic != topic:
-            sub_queries.append(f"{clean_topic} definition")
-            sub_queries.append(clean_topic)
+            sub_queries.extend([clean_topic, f"{clean_topic} definition"])
+
+    # 4. Keyword extraction: remove stop words and search key terms
+    stop_words = {"what", "is", "are", "the", "a", "an", "in", "of", "for",
+                  "and", "or", "how", "does", "do", "can", "could", "would",
+                  "about", "tell", "me", "talk", "explain", "describe", "between"}
+    words = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
+    if len(words) >= 2:
+        sub_queries.append(" ".join(words))
 
     return sub_queries
 
@@ -76,41 +77,12 @@ def expand_query(query: str) -> list[str]:
 def multi_query_search(query: str, index, chunks: list[dict],
                        client=None, model_name: str = None,
                        k: int = TOP_K, score_threshold: float = None) -> list[dict]:
-    """Generate sub-queries and combine results for better retrieval."""
+    """Expand query and combine results for better retrieval."""
 
-    # Step 1: Rule-based query expansion
+    # Rule-based expansion only (no LLM needed)
     sub_queries = expand_query(query)
 
-    # Step 2: Try LLM-based expansion
-    if client and model_name:
-        try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a helpful assistant that generates search queries. "
-                            "Given a user question, generate 3 different search queries "
-                            "that would help find relevant information. "
-                            "Return ONLY the queries, one per line, no numbering."
-                        ),
-                    },
-                    {"role": "user", "content": query},
-                ],
-                temperature=0.7,
-                max_tokens=200,
-            )
-            content = response.choices[0].message.content
-            if content:
-                llm_queries = [q.strip() for q in content.strip().split("\n") if q.strip()]
-                sub_queries.extend(llm_queries[:3])
-            else:
-                print("   ⚠️ LLM returned empty response, using rule-based expansion")
-        except Exception as e:
-            print(f"   ⚠️ LLM expansion failed: {e}")
-
-    # Deduplicate while preserving order
+    # Deduplicate
     all_queries = [query] + sub_queries
     seen = set()
     unique_queries = []

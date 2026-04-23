@@ -21,7 +21,7 @@ CHUNK_OVERLAP = 300  # increased from 200
 
 # LLM
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-3.5-turbo")
+MODEL_NAME = os.getenv("MODEL_NAME", "z-ai/glm-4.5-air:free")
 
 # Retrieval
 TOP_K = 8  # increased from 5

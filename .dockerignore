@@ -1,0 +1,37 @@
+# Virtual environment (THIS IS THE BIG ONE)
+venv/
+env/
+.venv/
+ENV/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Cache
+__pycache__/
+*.py[cod]
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+documents/cleaned_text.txt
+documents/chunks.json
+documents/chunks.pkl
+documents/faiss.index
+documents/pdf_text_content.txt
+documents/UCTP.pdf
+
+# Misc
+*.log
+notebooks/
+test.py
+run.bat
+stop.bat
+assets/
